@@ -1,0 +1,343 @@
+#!/bin/bash
+#
+# Script: update-ide
+# By: Mijail Molina Lavrishcheva <mijail@edutin.com>
+#
+#
+# exit on error
+set -e
+
+############################################################ GLOBAL VARIABLES ##
+
+# name of script
+readonly  SCRIPT_NAME="update-ide"
+
+# version of the script
+          VERSION=0.5
+
+# Edutin Cloud9 modules on Github repository
+readonly  EDUTIN_GIT_REPOSITORY="github.com/Edutin-code"
+readonly  EDUTIN_MODULES=(cat simple info)
+
+# folder paths
+readonly  EDUTIN_HOME="$HOME/.edutin"
+readonly  EDUTIN_BINARIES="$EDUTIN_HOME/bin"
+readonly  EDUTIN_LOGS="$EDUTIN_HOME/logs"
+readonly  SCRIPT_LOGS="$EDUTIN_LOGS/update-ide"
+
+# file paths
+readonly  SCRIPT_LOG="$SCRIPT_LOGS/output.log"
+readonly  SCRIPT_LOG_ERROR="$SCRIPT_LOGS/error.log"
+readonly  UPDATE_SCRIPT="$EDUTIN_BINARIES/$SCRIPT_NAME"
+
+
+# numeric variables
+          STEPS=0
+          CURRENT_STEP=1
+          SECONDS=0
+
+# boolean variables
+          UPDATE_AVAILABLE=false
+          UPDATE50=true
+
+
+########################################################## INITIAL PROCEDURES ##
+
+# make lower the priority of the 'update-ide' process and of all its childs
+renice -n 1 -p $$ > /dev/null
+
+# create '$HOME/.edutin' directory
+mkdir -p ${EDUTIN_HOME}
+
+# https://stackoverflow.com/a/692407/9621052
+# redirect output of all commands to $LOG
+mkdir -p ${SCRIPT_LOGS}
+exec > >(sudo tee "$SCRIPT_LOG") 2> >(sudo tee "$SCRIPT_LOG_ERROR" >&2)
+
+# show current date
+date
+
+
+
+################################################################### FUNCTIONS ##
+
+check_ide50(){
+  # checks if a new version of 'ide50' is available to update
+
+  if $UPDATE50; then
+
+    # show current step of total steps
+    step_message "UPDATE CS50"
+
+    echo "Checking for available updates..."
+
+    # try to fix dpkg before updating
+    sudo dpkg --configure -a
+
+    # TODO temporary until most people move to new version
+    # git-lfs repo bug causing apt-get update to fail
+    echo "Clearing package cache..."
+    sudo rm -rf /var/lib/apt/lists/*
+
+    echo "Updating sources..."
+
+    # update the repositories silently, only show errors
+    {
+      sudo apt-get update
+    } > /dev/null
+
+    echo "Sources were updated!"
+
+    check_package_version ide50
+    return $?
+  fi
+}
+
+
+check_package_version(){
+  # get the version of any package
+
+  local Versions=$(apt-cache policy "$1")
+  local Current_Version=$(grep Installed: <<< "$Versions" | awk '{print $2}')
+  local Internet_Version=$(grep Candidate: <<< "$Versions" | awk '{print $2}')
+
+  # check if a new release is available to update.
+  if version_gt $Current_Version $Internet_Version; then
+    return 0
+  fi
+
+  echo "No update was found!"
+  return 1
+}
+
+
+check_update(){
+  # Check if a new version is available
+
+  if [ -e "$UPDATE_SCRIPT" ]; then
+
+    # download the remote 'update-ide' script
+    curl --fail --header 'Cache-Control: no-cache' --silent \
+    -L https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide \
+    -o "$UPDATE_SCRIPT".new
+    chmod +x "$UPDATE_SCRIPT".new
+
+    # get the version of local and remote 'update-ide' scripts
+    Internet_Version=$(grep "VERSION" "$UPDATE_SCRIPT".new | \
+    awk -F"=" '{print $2}' | head -1)
+    Current_Version=$(cat "$UPDATE_SCRIPT" | grep "VERSION" | \
+    awk -F"=" '{print $2}' | head -1)
+
+    # check if the version of remote script is major than local script
+    if version_gt $Current_Version $Internet_Version; then
+      echo "A new version of 'update-ide' was found!"
+      UPDATE_AVAILABLE=true
+      return 0
+
+    else
+      echo -e "You are executing the last version of 'update-ide'! \n"
+
+      # remove the downloaded 'update-ide' script
+      [ -e "$UPDATE_SCRIPT".new ] && rm "$UPDATE_SCRIPT".new
+    fi
+  fi
+
+  return 1
+}
+
+
+install_updater(){
+  # download and overrides the 'update-ide' script
+
+  # show current step of total steps
+  step_message "INSTALL UPDATE SCRIPT"
+
+  echo "Installing update SCRIPT..."
+
+  # create '$HOME/.edutin/bin' directory
+  mkdir -p "$EDUTIN_BINARIES"
+
+  # downloading remote 'update-ide' script
+  curl --fail --header 'Cache-Control: no-cache' --silent \
+  -L https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide \
+  -o "$UPDATE_SCRIPT"
+
+  # mark script as an executable file
+  chmod +x "$UPDATE_SCRIPT"
+
+  # replace 'update50' script with 'update-ide' script
+  if [ -e "$UPDATE_SCRIPT" ]; then
+
+    local files=(/home/ubuntu/.cs50/bin /home/ubuntu/bin)
+
+    for i in "${files[@]}"
+    do
+      [ -e "$i/update50" ] && rm "$i/update50"
+      [ -d "$i" ] && cp -f "$UPDATE_SCRIPT" "$i/update50"
+    done
+  fi
+
+  echo "The 'update-ide' script has been installed succesfully!"
+
+  # check if the Edutin 'bin' directory is in PATH
+  if [[ $PATH != *"/home/ubuntu/.edutin/bin"* ]] || \
+  [[ $(tail -10 /home/ubuntu/.bashrc) != *"/home/ubuntu/.edutin/bin"* ]]; then
+    echo "Adding parameters to PATH..."
+
+    # add the Edutin 'bin' directory to PATH
+    echo export PATH="$"PATH:/home/ubuntu/.edutin/bin/ >> /home/ubuntu/.bashrc
+    export PATH=$PATH:/home/ubuntu/.edutin/bin/
+
+    echo "PATH was updated!"
+  fi
+}
+
+
+self_update(){
+  # updates 'update-ide' script and runs it again
+
+  # show current step of total steps
+  step_message "EXECUTING SELF UPDATE"
+
+  echo "Executing the new version of 'update-ide'!"
+
+  # replace the old 'update-ide' script with the new script version
+  mv "$UPDATE_SCRIPT".new "$UPDATE_SCRIPT"
+
+  if [ -e "$UPDATE_SCRIPT".new ]; then
+    rm "$UPDATE_SCRIPT".new
+    exit 1
+  fi
+
+  # execute 'update-ide' again
+  sleep 3
+  bash "$UPDATE_SCRIPT"
+}
+
+
+steps_counter(){
+  # count how much steps
+
+  # the step will be the 'install_updater' or 'self_update'
+  STEPS=$((STEPS+1))
+  if check_update; then return 0; fi
+
+  # custom update50 step
+  if $UPDATE50; then
+    STEPS=$((STEPS+1))
+  fi
+
+  # the step will be the 'update_modules_on_git'
+  STEPS=$((STEPS+1))
+
+  return 0
+}
+
+
+step_message(){
+  # print the current step message
+
+  echo -e "\n-- Step $CURRENT_STEP/$STEPS: $1 --"
+  CURRENT_STEP=$((CURRENT_STEP+1))
+}
+
+# https://stackoverflow.com/a/8903280/9621052
+time_elapsed(){
+  # print the elapsed time over the execution of the script
+
+  local DURATION=$SECONDS
+  echo -e "\nTime elapsed: $(($DURATION / 60))m $(($DURATION % 60))s.\n"
+}
+
+
+update_cs50(){
+  # all the steps that 'update50' needs to do
+  if $UPDATE50; then
+
+    echo "Updating CS50..."
+
+    set -o pipefail
+
+    # curl latest 'update50' script, passing in any command-line args
+    if ! bash <(curl --fail --header 'Cache-Control: no-cache' --silent \
+    -L  https://cs50.ly/update50) $@; then
+        echo "Unable to update workspace. Try again in a few minutes!"
+    fi
+
+    set +o pipefail
+  fi
+}
+
+
+update_modules_on_git(){
+  # update all customized modules
+
+  # show current step of total steps
+  step_message "UPDATE EDUTINS IDE"
+
+  local ModulePrefix="c9.ide.cs50"
+  local Owner=$(ls -al /var/c9sdk/ | grep "plugins" | head -1 | \
+  awk '{print $3}')
+
+  # Set ubuntu as the owner of the 'plugins' folder
+  if [ "$Owner" != "ubuntu" ]; then
+    sudo chown -R ubuntu:ubuntu /var/c9sdk/plugins
+  fi
+
+  for i in "$@"
+    do
+      local Module="$ModulePrefix.$i"
+      local ModulePath="$EDUTIN_HOME/modules/.$Module"
+
+      rm -rf "$ModulePath"
+
+      echo "Cloning $i module..."
+
+      # get the module and place it in a folder named '$ModulePrefix.$i'
+      if !(git clone --depth=1 git://"$EDUTIN_GIT_REPOSITORY/harvard.cs50.$i" "$ModulePath" -q)
+      then
+        rm -rf "$ModulePath"; continue;
+      fi
+
+      echo "Updating $i module..."
+
+      # update the module with the custom version
+      rm -rf "$ModulePath"/{.git,.gitignore,README.md}
+      rm -rf /var/c9sdk/plugins/"$Module"
+      cp -rf "$ModulePath" /var/c9sdk/plugins/"$Module"
+
+      echo "$i module updated!"
+    done
+}
+
+
+# https://stackoverflow.com/a/24067243/9621052
+version_gt() {
+  # checks if a version string is greather than other version string
+
+  #echo "$@" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }';
+  test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
+}
+
+
+############################################################# MAIN PROCEDURES ##
+
+steps_counter
+
+if $UPDATE_AVAILABLE; then
+  self_update
+  exit 0
+fi
+
+if check_ide50; then
+  update_cs50
+fi
+
+install_updater
+update_modules_on_git ${EDUTIN_MODULES[@]}
+
+echo "-- THE UDATE PROCESS HAS FINISHED! --"
+
+time_elapsed
+
+exit 0

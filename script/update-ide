@@ -13,7 +13,7 @@ set -e
 readonly  SCRIPT_NAME="update-ide"
 
 # version of the script
-          VERSION=0.5
+          VERSION=0.6
 
 # Edutin Cloud9 modules on Github repository
 readonly  EDUTIN_GIT_REPOSITORY="github.com/Edutin-code"
@@ -102,7 +102,7 @@ check_package_version(){
   local Internet_Version=$(grep Candidate: <<< "$Versions" | awk '{print $2}')
 
   # check if a new release is available to update.
-  if version_gt $Current_Version $Internet_Version; then
+  if version_gt $Internet_Version $Current_Version; then
     return 0
   fi
 
@@ -114,70 +114,84 @@ check_package_version(){
 check_update(){
   # Check if a new version is available
 
-  if [ -e "$UPDATE_SCRIPT" ]; then
+  if [ -e "$3" ]; then
 
     # download the remote 'update-ide' script
     curl --fail --header 'Cache-Control: no-cache' --silent \
-    -L https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide \
-    -o "$UPDATE_SCRIPT".new
-    chmod +x "$UPDATE_SCRIPT".new
+    -L $2 \
+    -o "$3".new
+    chmod +x "$3".new
 
     # get the version of local and remote 'update-ide' scripts
-    Internet_Version=$(grep "VERSION" "$UPDATE_SCRIPT".new | \
+    Internet_Version=$(grep "VERSION" "$3".new | \
     awk -F"=" '{print $2}' | head -1)
-    Current_Version=$(cat "$UPDATE_SCRIPT" | grep "VERSION" | \
+    Current_Version=$(cat "$3" | grep "VERSION" | \
     awk -F"=" '{print $2}' | head -1)
 
     # check if the version of remote script is major than local script
-    if version_gt $Current_Version $Internet_Version; then
-      echo "A new version of 'update-ide' was found!"
+    if version_gt $Internet_Version $Current_Version; then
+      echo "A new version of $1 was found!"
       UPDATE_AVAILABLE=true
-      return 0
 
     else
-      echo -e "You are executing the last version of 'update-ide'! \n"
 
       # remove the downloaded 'update-ide' script
-      [ -e "$UPDATE_SCRIPT".new ] && rm "$UPDATE_SCRIPT".new
+      [ -e "$3".new ] && rm "$3".new
     fi
-  fi
 
-  return 1
+  else
+    UPDATE_AVAILABLE=true
+  fi
 }
 
 
-install_updater(){
-  # download and overrides the 'update-ide' script
+check_update_edutin_script(){
+  # Check if a new version of 'edutin-cli' is available
 
-  # show current step of total steps
-  step_message "INSTALL UPDATE SCRIPT"
+  check_update "'edutin-cli'" \
+  "https://raw.githubusercontent.com/Edutin-code/edutin-cli/master/script/edutin" \
+  "$EDUTIN_BINARIES/edutin"
+}
 
-  echo "Installing update SCRIPT..."
+
+check_update_updater(){
+  # Check if a new version of 'update-ide' is available
+
+  check_update "'update-ide'" \
+  "https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide" \
+  $UPDATE_SCRIPT
+}
+
+
+installer(){
+  # download and overwrites any script
+
+  echo "Installing $1 script..."
 
   # create '$HOME/.edutin/bin' directory
   mkdir -p "$EDUTIN_BINARIES"
 
   # downloading remote 'update-ide' script
   curl --fail --header 'Cache-Control: no-cache' --silent \
-  -L https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide \
-  -o "$UPDATE_SCRIPT"
+  -L $2 \
+  -o $3
 
   # mark script as an executable file
-  chmod +x "$UPDATE_SCRIPT"
+  chmod +x $3
 
   # replace 'update50' script with 'update-ide' script
-  if [ -e "$UPDATE_SCRIPT" ]; then
+  if [ -e "$3" ]; then
 
     local files=(/home/ubuntu/.cs50/bin /home/ubuntu/bin)
 
-    for i in "${files[@]}"
+    for i in "${@:5}"
     do
       [ -e "$i/update50" ] && rm "$i/update50"
       [ -d "$i" ] && cp -f "$UPDATE_SCRIPT" "$i/update50"
     done
   fi
 
-  echo "The 'update-ide' script has been installed succesfully!"
+  echo "The $1 script has been installed succesfully!"
 
   # check if the Edutin 'bin' directory is in PATH
   if [[ $PATH != *"/home/ubuntu/.edutin/bin"* ]] || \
@@ -190,6 +204,33 @@ install_updater(){
 
     echo "PATH was updated!"
   fi
+}
+
+
+install_edutin_script(){
+  # download and overwrites the 'edutin-cli' script
+
+  # show current step of total steps
+  step_message "INSTALL EDUTIN-CLI SCRIPT"
+
+  installer "'edutin-cli'" \
+  "https://raw.githubusercontent.com/Edutin-code/edutin-cli/master/script/edutin" \
+  "$EDUTIN_BINARIES/edutin"
+}
+
+
+install_updater(){
+  # download and overwrites the 'update-ide' script
+
+  # show current step of total steps
+  step_message "INSTALL UPDATE SCRIPT"
+
+  installer "'update-ide'" \
+  "https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide" \
+  $UPDATE_SCRIPT \
+  "update50" \
+  "/home/ubuntu/.cs50/bin" \
+  "/home/ubuntu/bin"
 }
 
 
@@ -220,12 +261,23 @@ steps_counter(){
 
   # the step will be the 'install_updater' or 'self_update'
   STEPS=$((STEPS+1))
-  if check_update; then return 0; fi
+
+  check_update_updater
+  if $UPDATE_AVAILABLE; then return 0; fi
+
+  echo -e "You are executing the last version of 'update-ide'!"
 
   # custom update50 step
   if $UPDATE50; then
     STEPS=$((STEPS+1))
   fi
+
+  check_update_edutin_script
+  if $UPDATE_AVAILABLE; then
+    STEPS=$((STEPS+1))
+    UPDATE_AVAILABLE=false
+  fi
+
 
   # the step will be the 'update_modules_on_git'
   STEPS=$((STEPS+1))
@@ -241,12 +293,13 @@ step_message(){
   CURRENT_STEP=$((CURRENT_STEP+1))
 }
 
+
 # https://stackoverflow.com/a/8903280/9621052
 time_elapsed(){
   # print the elapsed time over the execution of the script
 
-  local DURATION=$SECONDS
-  echo -e "\nTime elapsed: $(($DURATION / 60))m $(($DURATION % 60))s.\n"
+  local Duration=$SECONDS
+  echo -e "\nTime elapsed: $(($Duration / 60))m $(($Duration % 60))s.\n"
 }
 
 
@@ -324,19 +377,27 @@ version_gt() {
 
 steps_counter
 
+
+install_updater
+
 if $UPDATE_AVAILABLE; then
   self_update
   exit 0
+fi
+
+check_update_edutin_script
+if $UPDATE_AVAILABLE; then
+  install_edutin_script
 fi
 
 if check_ide50; then
   update_cs50
 fi
 
-install_updater
+
 update_modules_on_git ${EDUTIN_MODULES[@]}
 
-echo "-- THE UDATE PROCESS HAS FINISHED! --"
+echo -e "\n-- THE UDATE PROCESS HAS FINISHED! --"
 
 time_elapsed
 

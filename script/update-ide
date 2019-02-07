@@ -226,7 +226,7 @@ install_updater(){
   step_message "INSTALL UPDATE SCRIPT"
 
   installer "'update-ide'" \
-  "https://raw.githubusercontent.com/Edutin-code/ide/master/files/update-ide" \
+  "https://raw.githubusercontent.com/Edutin-code/ide/master/update-ide" \
   $UPDATE_SCRIPT \
   "update50" \
   "/home/ubuntu/.cs50/bin" \

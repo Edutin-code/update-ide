@@ -158,7 +158,7 @@ check_update_updater(){
   # Check if a new version of 'update-ide' is available
 
   check_update "'update-ide'" \
-  "https://raw.githubusercontent.com/Edutin-code/ide/master/update-ide" \
+  "https://raw.githubusercontent.com/Edutin-code/update-ide/master/update-ide" \
   $UPDATE_SCRIPT
 }
 
@@ -226,7 +226,7 @@ install_updater(){
   step_message "INSTALL UPDATE SCRIPT"
 
   installer "'update-ide'" \
-  "https://raw.githubusercontent.com/Edutin-code/ide/master/update-ide" \
+  "https://raw.githubusercontent.com/Edutin-code/update-ide/master/update-ide" \
   $UPDATE_SCRIPT \
   "update50" \
   "/home/ubuntu/.cs50/bin" \

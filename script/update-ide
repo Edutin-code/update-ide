@@ -13,7 +13,7 @@ set -e
 readonly  SCRIPT_NAME="update-ide"
 
 # version of the script
-          VERSION=0.6
+          VERSION=0.7
 
 # Edutin Cloud9 modules on Github repository
 readonly  EDUTIN_GIT_REPOSITORY="github.com/Edutin-code"

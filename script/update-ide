@@ -138,9 +138,6 @@ check_update(){
       # remove the downloaded 'update-ide' script
       [ -e "$3".new ] && rm "$3".new
     fi
-
-  else
-    UPDATE_AVAILABLE=true
   fi
 }
 

@@ -131,7 +131,7 @@ check_update(){
     # check if the version of remote script is major than local script
     if version_gt $Internet_Version $Current_Version; then
       echo "A new version of $1 was found!"
-      UPDATE_AVAILABLE=true
+      #UPDATE_AVAILABLE=true
 
     else
 

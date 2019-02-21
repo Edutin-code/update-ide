@@ -129,7 +129,9 @@ check_update(){
     awk -F"=" '{print $2}' | head -1)
 
     # check if the version of remote script is major than local script
-    if version_gt $Internet_Version $Current_Version; then
+    if [[ version_gt $Internet_Version $Current_Version ]] || \
+    [[ $Current_version=="(none)" ]]
+    then
       echo "A new version of $1 was found!"
       UPDATE_AVAILABLE=true
 
@@ -366,7 +368,6 @@ version_gt() {
   # checks if a version string is greather than other version string
 
   #echo "$@" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }';
-  test "$2" != "(none)" && \
   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
 }
 

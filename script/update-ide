@@ -138,6 +138,9 @@ check_update(){
       # remove the downloaded 'update-ide' script
       [ -e "$3".new ] && rm "$3".new
     fi
+
+  else
+    UPDATE_AVAILABLE=true
   fi
 }
 
@@ -239,10 +242,10 @@ self_update(){
 
   echo "Executing the new version of 'update-ide'!"
 
-  # replace the old 'update-ide' script with the new script version
-  mv "$UPDATE_SCRIPT".new "$UPDATE_SCRIPT"
-
   if [ -e "$UPDATE_SCRIPT".new ]; then
+    # replace the old 'update-ide' script with the new script version
+    mv "$UPDATE_SCRIPT".new "$UPDATE_SCRIPT"
+    
     rm "$UPDATE_SCRIPT".new
     exit 1
   fi

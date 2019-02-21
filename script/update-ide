@@ -101,6 +101,11 @@ check_package_version(){
   local Current_Version=$(grep Installed: <<< "$Versions" | awk '{print $2}')
   local Internet_Version=$(grep Candidate: <<< "$Versions" | awk '{print $2}')
 
+  # check if a new release is not installed.
+  if [[ $Current_Version=="(none)" ]]; then
+    return 0
+  fi
+
   # check if a new release is available to update.
   if version_gt $Internet_Version $Current_Version; then
     return 0
@@ -129,9 +134,7 @@ check_update(){
     awk -F"=" '{print $2}' | head -1)
 
     # check if the version of remote script is major than local script
-    if [[ version_gt $Internet_Version $Current_Version ]] || \
-    [[ $Current_version=="(none)" ]]
-    then
+    if version_gt $Internet_Version $Current_Version ;then
       echo "A new version of $1 was found!"
       UPDATE_AVAILABLE=true
 

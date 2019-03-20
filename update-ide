@@ -10,6 +10,6 @@ set -o pipefail
 VERSION=0.1.1
 
 # curl latest update-ide script, passing in any command-line args
-if ! bash <(curl --fail --header 'Cache-Control: no-cache' --silent --location https://raw.githubusercontent.com/Edutin-code/update-ide/master/script/update-ide) $@; then
+if ! bash <(curl --fail --header 'Cache-Control: no-cache' --silent --location https://raw.githubusercontent.com/Edutin-code/update-ide/develop/script/update-ide) $@; then
 echo "Unable to update workspace. Try again in a few minutes!"
 fi

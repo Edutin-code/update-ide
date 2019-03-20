@@ -13,7 +13,7 @@ set -e
 readonly  SCRIPT_NAME="update-ide"
 
 # version of the script
-          VERSION=0.6
+          VERSION=0.7
 
 # Edutin Cloud9 modules on Github repository
 readonly  EDUTIN_GIT_REPOSITORY="github.com/Edutin-code"
@@ -30,6 +30,9 @@ readonly  SCRIPT_LOG="$SCRIPT_LOGS/output.log"
 readonly  SCRIPT_LOG_ERROR="$SCRIPT_LOGS/error.log"
 readonly  UPDATE_SCRIPT="$EDUTIN_BINARIES/$SCRIPT_NAME"
 
+# string messages
+readonly  SCRIPT_USAGE="Usage: $SCRIPT_NAME [OPTIONS]"
+
 
 # numeric variables
           STEPS=0
@@ -37,6 +40,7 @@ readonly  UPDATE_SCRIPT="$EDUTIN_BINARIES/$SCRIPT_NAME"
           SECONDS=0
 
 # boolean variables
+          FORCE_UPDATE=false
           UPDATE_AVAILABLE=false
           UPDATE50=true
 
@@ -101,6 +105,11 @@ check_package_version(){
   local Current_Version=$(grep Installed: <<< "$Versions" | awk '{print $2}')
   local Internet_Version=$(grep Candidate: <<< "$Versions" | awk '{print $2}')
 
+  # check if a new release is not installed.
+  if [[ $Current_Version=="(none)" ]]; then
+    return 0
+  fi
+
   # check if a new release is available to update.
   if version_gt $Internet_Version $Current_Version; then
     return 0
@@ -129,7 +138,7 @@ check_update(){
     awk -F"=" '{print $2}' | head -1)
 
     # check if the version of remote script is major than local script
-    if version_gt $Internet_Version $Current_Version; then
+    if version_gt $Internet_Version $Current_Version ;then
       echo "A new version of $1 was found!"
       UPDATE_AVAILABLE=true
 
@@ -138,9 +147,6 @@ check_update(){
       # remove the downloaded 'update-ide' script
       [ -e "$3".new ] && rm "$3".new
     fi
-
-  else
-    UPDATE_AVAILABLE=true
   fi
 }
 
@@ -242,10 +248,10 @@ self_update(){
 
   echo "Executing the new version of 'update-ide'!"
 
-  # replace the old 'update-ide' script with the new script version
-  mv "$UPDATE_SCRIPT".new "$UPDATE_SCRIPT"
-
   if [ -e "$UPDATE_SCRIPT".new ]; then
+    # replace the old 'update-ide' script with the new script version
+    mv "$UPDATE_SCRIPT".new "$UPDATE_SCRIPT"
+
     rm "$UPDATE_SCRIPT".new
     exit 1
   fi
@@ -268,12 +274,12 @@ steps_counter(){
   echo -e "You are executing the last version of 'update-ide'!"
 
   # custom update50 step
-  if $UPDATE50; then
+  if $UPDATE50 || $FORCE_UPDATE; then
     STEPS=$((STEPS+1))
   fi
 
   check_update_edutin_script
-  if $UPDATE_AVAILABLE; then
+  if $UPDATE_AVAILABLE || $FORCE_UPDATE; then
     STEPS=$((STEPS+1))
     UPDATE_AVAILABLE=false
   fi
@@ -364,6 +370,19 @@ update_modules_on_git(){
 }
 
 
+usage() {
+  echo "  "
+  echo ${SCRIPT_USAGE}
+  echo "  "
+  echo "  This command-line tool updates your Edutin IDE in a easy way."
+  echo "  "
+  echo "OPTIONS:"
+  echo "  -f, --force            Display the help message of a command"
+  echo "  -h, --help            Display the help message of a command"
+  echo "  -v, --version         Print version and exit"
+}
+
+
 # https://stackoverflow.com/a/24067243/9621052
 version_gt() {
   # checks if a version string is greather than other version string
@@ -371,6 +390,38 @@ version_gt() {
   #echo "$@" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }';
   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
 }
+
+
+
+############################################################# PROCESS OPTIONS ##
+
+# process given options
+while [[ $# > 0 ]]
+do
+    case $@ in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+
+      -v | --version)
+        echo "Version: $version"
+        exit 0
+        ;;
+
+      -f | --force)
+        FORCE_UPDATE=true
+        ;;
+
+      *)
+        echo $SCRIPT_USAGE
+        exit 1
+        ;;
+    esac
+
+    shift
+done
+
 
 
 ############################################################# MAIN PROCEDURES ##
@@ -386,11 +437,11 @@ if $UPDATE_AVAILABLE; then
 fi
 
 check_update_edutin_script
-if $UPDATE_AVAILABLE; then
+if $UPDATE_AVAILABLE || $FORCE_UPDATE; then
   install_edutin_script
 fi
 
-if check_ide50; then
+if check_ide50 || $FORCE_UPDATE; then
   update_cs50
 fi
 

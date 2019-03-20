@@ -40,6 +40,7 @@ readonly  SCRIPT_USAGE="Usage: $SCRIPT_NAME [OPTIONS]"
           SECONDS=0
 
 # boolean variables
+          FORCE_UPDATE=false
           UPDATE_AVAILABLE=false
           UPDATE50=true
 
@@ -273,12 +274,12 @@ steps_counter(){
   echo -e "You are executing the last version of 'update-ide'!"
 
   # custom update50 step
-  if $UPDATE50; then
+  if $UPDATE50 || $FORCE_UPDATE; then
     STEPS=$((STEPS+1))
   fi
 
   check_update_edutin_script
-  if $UPDATE_AVAILABLE; then
+  if $UPDATE_AVAILABLE || $FORCE_UPDATE; then
     STEPS=$((STEPS+1))
     UPDATE_AVAILABLE=false
   fi
@@ -385,6 +386,10 @@ version_gt() {
 while [[ $# > 0 ]]
 do
     case $@ in
+      -f | --force)
+        FORCE_UPDATE=true
+        ;;
+
       *)
         echo $SCRIPT_USAGE
         exit 1
@@ -409,11 +414,11 @@ if $UPDATE_AVAILABLE; then
 fi
 
 check_update_edutin_script
-if $UPDATE_AVAILABLE; then
+if $UPDATE_AVAILABLE || $FORCE_UPDATE; then
   install_edutin_script
 fi
 
-if check_ide50; then
+if check_ide50 || $FORCE_UPDATE; then
   update_cs50
 fi
 

@@ -30,6 +30,9 @@ readonly  SCRIPT_LOG="$SCRIPT_LOGS/output.log"
 readonly  SCRIPT_LOG_ERROR="$SCRIPT_LOGS/error.log"
 readonly  UPDATE_SCRIPT="$EDUTIN_BINARIES/$SCRIPT_NAME"
 
+# string messages
+readonly  SCRIPT_USAGE="Usage: $SCRIPT_NAME [OPTIONS]"
+
 
 # numeric variables
           STEPS=0
@@ -373,6 +376,24 @@ version_gt() {
   #echo "$@" | awk -F. '{ printf("%03d%03d%03d\n", $1,$2,$3); }';
   test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
 }
+
+
+
+############################################################# PROCESS OPTIONS ##
+
+# process given options
+while [[ $# > 0 ]]
+do
+    case $@ in
+      *)
+        echo $SCRIPT_USAGE
+        exit 1
+        ;;
+    esac
+
+    shift
+done
+
 
 
 ############################################################# MAIN PROCEDURES ##

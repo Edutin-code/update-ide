@@ -377,6 +377,7 @@ usage() {
   echo "  This command-line tool updates your Edutin IDE in a easy way."
   echo "  "
   echo "OPTIONS:"
+  echo "  -f, --force            Display the help message of a command"
   echo "  -h, --help            Display the help message of a command"
   echo "  -v, --version         Print version and exit"
 }

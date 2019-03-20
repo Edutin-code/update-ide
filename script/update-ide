@@ -13,7 +13,7 @@ set -e
 readonly  SCRIPT_NAME="update-ide"
 
 # version of the script
-          VERSION=0.6
+          VERSION=0.7
 
 # Edutin Cloud9 modules on Github repository
 readonly  EDUTIN_GIT_REPOSITORY="github.com/Edutin-code"
@@ -377,6 +377,7 @@ usage() {
   echo "  This command-line tool updates your Edutin IDE in a easy way."
   echo "  "
   echo "OPTIONS:"
+  echo "  -f, --force            Display the help message of a command"
   echo "  -h, --help            Display the help message of a command"
   echo "  -v, --version         Print version and exit"
 }

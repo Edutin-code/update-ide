@@ -369,6 +369,18 @@ update_modules_on_git(){
 }
 
 
+usage() {
+  echo "  "
+  echo ${SCRIPT_USAGE}
+  echo "  "
+  echo "  This command-line tool updates your Edutin IDE in a easy way."
+  echo "  "
+  echo "OPTIONS:"
+  echo "  -h, --help            Display the help message of a command"
+  echo "  -v, --version         Print version and exit"
+}
+
+
 # https://stackoverflow.com/a/24067243/9621052
 version_gt() {
   # checks if a version string is greather than other version string
@@ -385,6 +397,16 @@ version_gt() {
 while [[ $# > 0 ]]
 do
     case $@ in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+
+      -v | --version)
+        echo "Version: $version"
+        exit 0
+        ;;
+
       *)
         echo $SCRIPT_USAGE
         exit 1

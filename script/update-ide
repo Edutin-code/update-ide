@@ -201,15 +201,17 @@ installer(){
 
   # check if the Edutin 'bin' directory is in PATH
   if [[ $PATH != *"/home/ubuntu/.edutin/bin"* ]] || \
-  [[ $(tail -10 /home/ubuntu/.bashrc) != *"/home/ubuntu/.edutin/bin"* ]]; then
+  [[ $(tail -10 /home/ubuntu/.profile) != *"/home/ubuntu/.edutin/bin"* ]]; then
     echo "Adding parameters to PATH..."
 
     # add the Edutin 'bin' directory to PATH
-    echo export PATH="$"PATH:/home/ubuntu/.edutin/bin/ >> /home/ubuntu/.bashrc
+    echo export PATH="$"PATH:/home/ubuntu/.edutin/bin/ >> /home/ubuntu/.profile
     export PATH=$PATH:/home/ubuntu/.edutin/bin/
 
     echo "PATH was updated!"
   fi
+  
+  source /home/ubuntu/.profile
 }
 
 

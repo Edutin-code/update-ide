@@ -53,6 +53,19 @@ renice -n 1 -p $$ > /dev/null
 # create '$HOME/.edutin' directory
 mkdir -p ${EDUTIN_HOME}
 
+# check if the Edutin's 'bin' directory is in PATH
+mkdir -p ${EDUTIN_BINARIES}
+if [[ $PATH != *"${HOME}/.edutin/bin"* ]] || \
+[[ $(tail -10 ${HOME}/.bashrc) != *"${HOME}/.edutin/bin"* ]]; then
+  echo "Adding parameters to PATH..."
+
+  # add the Edutin 'bin' directory to PATH
+  echo export PATH="$"PATH:${HOME}/.edutin/bin/ >> ${HOME}/.bashrc
+  source ${HOME}/.bashrc
+
+  echo "PATH was updated!"
+fi
+
 # https://stackoverflow.com/a/692407/9621052
 # redirect output of all commands to $LOG
 mkdir -p ${SCRIPT_LOGS}
@@ -198,20 +211,6 @@ installer(){
   fi
 
   echo "The $1 script has been installed succesfully!"
-
-  # check if the Edutin 'bin' directory is in PATH
-  if [[ $PATH != *"/home/ubuntu/.edutin/bin"* ]] || \
-  [[ $(tail -10 /home/ubuntu/.profile) != *"/home/ubuntu/.edutin/bin"* ]]; then
-    echo "Adding parameters to PATH..."
-
-    # add the Edutin 'bin' directory to PATH
-    echo export PATH="$"PATH:/home/ubuntu/.edutin/bin/ >> /home/ubuntu/.profile
-    export PATH=$PATH:/home/ubuntu/.edutin/bin/
-
-    echo "PATH was updated!"
-  fi
-
-  source /home/ubuntu/.profile
 }
 
 
